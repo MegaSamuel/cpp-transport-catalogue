@@ -15,21 +15,13 @@ int main(int argc, char** argv) {
         std::ifstream fin(argv[1], std::ios::in);
         std::ofstream fout(argv[2], std::ios::out);
 
-        std::string str_cnt;
+        query_input::queryDataBaseUpdate(catalogue, fin);
 
-        std::getline(fin, str_cnt);
-        query_input::queryDataBaseUpdate(catalogue, std::stoi(str_cnt), fin);
-
-        std::getline(fin, str_cnt);
-        query_output::queryDataBase(catalogue, std::stoi(str_cnt), fin, fout);
+        query_output::queryDataBase(catalogue, fin, fout);
     } else {
         // работа со стандартными потоками ввода/вывода
-        std::string str_cnt;
+        query_input::queryDataBaseUpdate(catalogue, std::cin);
 
-        std::getline(std::cin, str_cnt);
-        query_input::queryDataBaseUpdate(catalogue, std::stoi(str_cnt), std::cin);
-
-        std::getline(std::cin, str_cnt);
-        query_output::queryDataBase(catalogue, std::stoi(str_cnt), std::cin, std::cout);
+        query_output::queryDataBase(catalogue, std::cin, std::cout);
     }
 }

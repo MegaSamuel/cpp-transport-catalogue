@@ -9,6 +9,17 @@ namespace transport_catalogue {
 
 using namespace std::string_literals;
 
+BusInfo::BusInfo() {
+    stop_number = 0;
+    unique_stop_number = 0;
+    distance = 0;
+    curvature = 0.0;
+}
+
+size_t HasherPair::operator()(const std::pair<const Stop*, const Stop*>& p) const {
+    return std::hash<const void*>{}(p.first) + std::hash<const void*>{}(p.second);
+}
+
 void TransportCatalogue::addStop(std::string_view name, geo_coord::Coordinates& coord) {
     std::string_view vname = getName(name);
 
@@ -45,6 +56,10 @@ void TransportCatalogue::addBus(std::string_view name, const std::vector<std::st
     }
 }
 
+void TransportCatalogue::addBusInfo(const Bus* bus, const BusInfo& info) {
+    m_bus_to_info[bus] = info;
+}
+
 const Bus* TransportCatalogue::findBus(std::string_view name) const {
     return (m_name_to_bus.count(name) > 0) ? m_name_to_bus.at(name) : nullptr;
 }
@@ -57,28 +72,7 @@ const BusInfo TransportCatalogue::getBusInfo(const Bus* bus) {
     if(!bus) {
         throw std::invalid_argument(__func__ + " invalid bus pointer"s);
     }
-    std::unordered_set<std::string_view> stop_storage;
-
-    int stops_count = bus->stops.size();
-
-    int distance = 0;
-    double geo_distance = 0;
-
-    const Stop* previous = nullptr;
-    for(const Stop* current : bus->stops) {
-        stop_storage.insert(current->name);
-        if(previous) {
-            distance += getDistance(previous, current);
-            geo_distance += ComputeDistance(previous->coordinates, current->coordinates);
-        }
-        previous = current;
-    }
-
-    int unique_stops_count = stop_storage.size();
-
-    double curvature = distance/geo_distance;
-
-    return BusInfo{stops_count, unique_stops_count, distance, curvature};
+    return m_bus_to_info.at(bus);
 }
 
 const BusInfo TransportCatalogue::getBusInfo(const std::string_view name) {
@@ -126,6 +120,11 @@ int TransportCatalogue::getDistance(const Stop* stop_from, const Stop* stop_to) 
 
     // расстояние от stop_from до stop_to
     return m_distance.at(key_forward);
+}
+
+std::string_view TransportCatalogue::getName(std::string_view str) {
+    m_name_to_storage.push_back(static_cast<std::string>(str));
+    return m_name_to_storage.back();
 }
 
 } // namespace transport_catalogue

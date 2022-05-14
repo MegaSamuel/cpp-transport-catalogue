@@ -27,16 +27,16 @@ struct Bus {
 
 // информация о маршруте
 struct BusInfo {
-    int number;
-    int unique;
+    int stop_number;
+    int unique_stop_number;
     int distance;
     double curvature;
+
+    BusInfo();
 };
 
 struct HasherPair {
-    size_t operator()(const std::pair<const Stop*, const Stop*>& p) const {
-        return std::hash<const void*>{}(p.first) + std::hash<const void*>{}(p.second);
-    }
+    size_t operator()(const std::pair<const Stop*, const Stop*>& p) const;
 };
 
 class TransportCatalogue {
@@ -49,19 +49,22 @@ public:
     // добавить маршрут
     void addBus(std::string_view name, const std::vector<std::string>& stops);
 
-	// поиск остановки по имени
-	const Stop* findStop(std::string_view name) const;
+    // добавить информацию о маршруте
+    void addBusInfo(const Bus* bus, const BusInfo& info);
 
-	// поиск маршрута по имени
-	const Bus* findBus(std::string_view name) const;
+    // поиск остановки по имени
+    const Stop* findStop(std::string_view name) const;
 
-	// получение информации о маршруте
-	const BusInfo getBusInfo(const Bus* bus);
-	const BusInfo getBusInfo(const std::string_view name);
+    // поиск маршрута по имени
+    const Bus* findBus(std::string_view name) const;
 
-	// получение информации о автобусах проходящих через остановку
-	int getBusesNumOnStop(const Stop* stop);
-	std::vector<const Bus*> getBusesOnStop(const Stop* stop);
+    // получение информации о маршруте
+    const BusInfo getBusInfo(const Bus* bus);
+    const BusInfo getBusInfo(const std::string_view name);
+
+    // получение информации о автобусах проходящих через остановку
+    int getBusesNumOnStop(const Stop* stop);
+    std::vector<const Bus*> getBusesOnStop(const Stop* stop);
 
     // установить расстояние между остановок
     void setDistance(const std::string& stop_from, const std::string& stop_to, int distance);
@@ -71,7 +74,7 @@ public:
 
 private:
     // здесь живут все имена (сюда показывает string_view)
-	std::deque<std::string> m_name_to_storage;
+    std::deque<std::string> m_name_to_storage;
 
     // остановки
     std::deque<Stop> m_stops;
@@ -85,12 +88,12 @@ private:
     std::unordered_map<std::pair<const Stop*, const Stop*>, int, HasherPair> m_distance;
 
     // таблица для получения автобусов проходящих через остановку
-	std::unordered_map<const Stop*, std::unordered_set<Bus*>> m_stop_to_bus;
+    std::unordered_map<const Stop*, std::unordered_set<Bus*>> m_stop_to_bus;
 
-	std::string_view getName(std::string_view str) {
-		m_name_to_storage.push_back(static_cast<std::string>(str));
-		return m_name_to_storage.back();
-	}
+    // таблица для получения информации о маршруте
+    std::unordered_map<const Bus*, BusInfo> m_bus_to_info;
+
+    std::string_view getName(std::string_view str);
 };
 
 } // namespace transport_catalogue

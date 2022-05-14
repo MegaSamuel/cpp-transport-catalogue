@@ -36,8 +36,6 @@ StopQuery parseStop(const std::string& line) {
     // имя
     result.name = line.substr(from1, to1);
 
-    //cout << "--" << line.substr(from1, to1) << "--" << endl;
-
     // позиция широты
     auto from2 = line.find_first_not_of(' ', colon+1);
 
@@ -48,8 +46,6 @@ StopQuery parseStop(const std::string& line) {
 
     result.coordinates.lat = std::stod(static_cast<std::string>(line.substr(from2, to2)));
 
-    //cout << "--" << line.substr(from2, to2) << "--" << endl;
-
     // позиция долготы
     auto from3 = line.find_first_not_of(' ', comma1+1);
 
@@ -59,8 +55,6 @@ StopQuery parseStop(const std::string& line) {
     auto to3 = line.substr(from3, comma2-from3).find_last_not_of(' ', comma2-from3)+1;
 
     result.coordinates.lng = std::stod(static_cast<std::string>(line.substr(from3, to3)));
-
-    //cout << "--" << line.substr(from3, to3) << "--" << endl;
 
     // находим позицию ','
     auto comma3 = line.find(',', from3);
@@ -77,8 +71,6 @@ StopQuery parseStop(const std::string& line) {
     size_t to;
     // проход по записям вида "DISTm to NAME"
     while(getline(istream, raw_str, ',')) {
-        //cout << "--" << raw_str << "--" << endl;
-
         // первый не пробельный символ записи
         from = raw_str.find_first_not_of(' ', 0);
 
@@ -88,8 +80,6 @@ StopQuery parseStop(const std::string& line) {
         // запись без пробелов в начале и конце
         str = raw_str.substr(from, to);
 
-        //cout << "--" << str << "--" << endl;
-
         // находим позицию " to"
         auto sep = str.find(" to", 0);
 
@@ -97,12 +87,8 @@ StopQuery parseStop(const std::string& line) {
         auto from1 = 0;
         auto to1 = str.substr(from1, sep).find_last_not_of(' ', sep);
 
-        //cout << "--" << str.substr(from1, to1) << "--" << endl;
-
         // позиции имени (от from2 до конца строки str)
         auto from2 = str.find_first_not_of(' ', sep+3);
-
-        //cout << "--" << str.substr(from2, str.size()) << "--" << endl;
 
         result.distances.push_back(make_pair(stoi(str.substr(from1, to1)), str.substr(from2, str.size())));
     }
@@ -171,7 +157,7 @@ BusQuery parseBus(const std::string& line) {
     return result;
 }
 
-std::istream& queryDataBaseUpdate(transport_catalogue::TransportCatalogue& catalogue, int count, std::istream& input) {
+std::istream& queryDataBaseUpdate(transport_catalogue::TransportCatalogue& catalogue, std::istream& input) {
     std::vector<StopQuery> stop_queries;
     std::vector<BusQuery> bus_queries;
     std::vector<std::string> buses;
@@ -179,8 +165,16 @@ std::istream& queryDataBaseUpdate(transport_catalogue::TransportCatalogue& catal
     const std::string cmd_stop = "Stop"s;
     const std::string cmd_bus = "Bus"s;
 
+    std::string str_line;
+
+    // количество запросов - строка
+    std::getline(input, str_line);
+
+    // количество запросов - число
+    int count = std::stoi(str_line);
+
     for(int i = 0; i < count; i++) {
-        std::string str_line;
+        // построчно читаем запросы
         getline(input, str_line);
 
         if(!cmd_stop.compare(str_line.substr(0, cmd_stop.size()))) {
@@ -192,14 +186,12 @@ std::istream& queryDataBaseUpdate(transport_catalogue::TransportCatalogue& catal
             buses.push_back(str_line);
             bus_queries.push_back(parseBus(buses.back()));
         } else {
-            std::cout << __FILE__ << " something went wrong\n";
+            std::cout << __func__ << " something went wrong\n";
         }
     }
 
     for(auto& query : stop_queries) {
-        //cout << query.name << ":" << endl;
         for(auto& [dist, stop_to] : query.distances) {
-            //cout << dist << " to " << stop_to << endl;
             // добавляем расстояния
             catalogue.setDistance(query.name, stop_to, dist);
         }
@@ -208,6 +200,33 @@ std::istream& queryDataBaseUpdate(transport_catalogue::TransportCatalogue& catal
     for(auto& query : bus_queries) {
         // добавляем маршруты
         catalogue.addBus(query.name, query.stops);
+
+        // формируем информацию о маршруте
+        transport_catalogue::BusInfo info;
+
+        const transport_catalogue::Bus* bus = catalogue.findBus(query.name);
+
+        std::unordered_set<std::string_view> stop_storage;
+
+        info.stop_number = bus->stops.size();
+
+        double geo_distance = 0;
+
+        const transport_catalogue::Stop* previous = nullptr;
+        for(const transport_catalogue::Stop* current : bus->stops) {
+            stop_storage.insert(current->name);
+            if(previous) {
+                info.distance += catalogue.getDistance(previous, current);
+                geo_distance += ComputeDistance(previous->coordinates, current->coordinates);
+            }
+            previous = current;
+        }
+
+        info.unique_stop_number = stop_storage.size();
+
+        info.curvature = info.distance/geo_distance;
+
+        catalogue.addBusInfo(bus, info);
     }
 
     return input;

@@ -11,9 +11,9 @@ using namespace std::string_literals;
 
 void printBusInfo(std::ostream& output, std::string_view name, const transport_catalogue::BusInfo& info) {
     output << "Bus "s << name << ": "s 
-           << info.number << " stops on route, "s 
-           << info.unique << " unique stops, "s 
-           << info.distance << " route length, "s
+           << info.stop_number << " stops on route, "s 
+           << info.unique_stop_number << " unique stops, "s 
+           << std::setprecision(6) << static_cast<double>(info.distance) << " route length, "s
            << std::setprecision(6) << info.curvature << " curvature\n"s;
 }
 
@@ -64,12 +64,20 @@ void parseStopQuery(transport_catalogue::TransportCatalogue& catalogue, std::ost
     }
 }
 
-void queryDataBase(transport_catalogue::TransportCatalogue& catalogue, int count, std::istream& input, std::ostream& output) {
+void queryDataBase(transport_catalogue::TransportCatalogue& catalogue, std::istream& input, std::ostream& output) {
     const std::string cmd_stop = "Stop"s;
     const std::string cmd_bus = "Bus"s;
 
+    std::string str_line;
+
+    // количество запросов - строка
+    std::getline(input, str_line);
+
+    // количество запросов - число
+    int count = std::stoi(str_line);
+
     for(int i = 0; i < count; i++) {
-        std::string str_line;
+        // построчно читаем запросы
         std::getline(input, str_line);
 
         if(!cmd_stop.compare(str_line.substr(0, cmd_stop.size()))) {
@@ -77,7 +85,7 @@ void queryDataBase(transport_catalogue::TransportCatalogue& catalogue, int count
         } else if(!cmd_bus.compare(str_line.substr(0, cmd_bus.size()))) {
             parseBusQuery(catalogue, output, str_line);
         } else {
-            output << __FILE__ << " something went wrong\n";
+            output << __func__ << " something went wrong\n";
         }
     }
 }

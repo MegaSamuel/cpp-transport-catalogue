@@ -6,6 +6,6 @@
 
 namespace query_input {
 
-std::istream& queryDataBaseUpdate(transport_catalogue::TransportCatalogue& catalogue, int count, std::istream& input);
+std::istream& queryDataBaseUpdate(transport_catalogue::TransportCatalogue& catalogue, std::istream& input);
 
 }
