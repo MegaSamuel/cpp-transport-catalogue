@@ -74,17 +74,11 @@ private:
     std::unordered_map<const domain::Stop*, std::unordered_set<domain::Bus*>> stop_to_buses_;
 
     struct BusSort {
-        bool operator()(const domain::Bus* lhs, const domain::Bus* rhs) const {
-            return std::lexicographical_compare(lhs->name.begin(), lhs->name.end(),
-                rhs->name.begin(), rhs->name.end());
-        }
+        bool operator()(const domain::Bus* lhs, const domain::Bus* rhs) const;
     };
 
     struct StopSort {
-        bool operator()(const domain::Stop* lhs, const domain::Stop* rhs) const {
-            return std::lexicographical_compare(lhs->name.begin(), lhs->name.end(),
-                rhs->name.begin(), rhs->name.end());
-        }
+        bool operator()(const domain::Stop* lhs, const domain::Stop* rhs) const;
     };
 
     std::set<const domain::Stop*, StopSort> unique_stops_;

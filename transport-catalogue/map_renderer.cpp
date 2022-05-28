@@ -75,6 +75,16 @@ void MapRenderer::Render(std::ostream& out) {
     document_.Render(out);
 }
 
+bool MapRenderer::BusSort::operator()(const domain::Bus* lhs, const domain::Bus* rhs) const {
+    return std::lexicographical_compare(lhs->name.begin(), lhs->name.end(),
+        rhs->name.begin(), rhs->name.end());
+}
+
+bool MapRenderer::StopSort::operator()(const domain::Stop* lhs, const domain::Stop* rhs) const {
+    return std::lexicographical_compare(lhs->name.begin(), lhs->name.end(),
+        rhs->name.begin(), rhs->name.end());
+}
+
 void MapRenderer::RenderBuses(SphereProjector& projector, const std::set<const domain::Bus*, BusSort>& buses_to_render) {
     int color_index = 0;
 
