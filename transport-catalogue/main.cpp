@@ -4,24 +4,24 @@
 #include <fstream>
 
 #include "transport_catalogue.h"
-#include "input_reader.h"
-#include "stat_reader.h"
+#include "json_reader.h"
+#include "request_handler.h"
 
-int main(int argc, char** argv) {
-    transport_catalogue::TransportCatalogue catalogue;
+int main() {
+    transport_catalogue::TransportCatalogue catalogue; // каталог
+    map_renderer::MapRenderer renderer;
 
-    if(1 < argc) {
-        // работа с файлами ввода/вывода
-        std::ifstream fin(argv[1], std::ios::in);
-        std::ofstream fout(argv[2], std::ios::out);
+    json_reader::JsonReader json_reader(catalogue, renderer);
 
-        query_input::queryDataBaseUpdate(catalogue, fin);
+    // ввод
+    json_reader.Load(std::cin);
 
-        query_output::queryDataBase(catalogue, fin, fout);
-    } else {
-        // работа со стандартными потоками ввода/вывода
-        query_input::queryDataBaseUpdate(catalogue, std::cin);
+    // парсим ввод (заполняем каталог)
+    json_reader.Parse();
 
-        query_output::queryDataBase(catalogue, std::cin, std::cout);
-    }
+    // запросы к каталогу
+    request_handler::RequestHandler request_handler(catalogue, renderer);
+
+    // вывод
+    json_reader.Print(std::cout, request_handler);
 }

@@ -10,4 +10,4 @@ bool Coordinates::operator!=(const Coordinates& other) const {
     return !(*this == other);
 }
 
-}
+} // namespace geo_coord

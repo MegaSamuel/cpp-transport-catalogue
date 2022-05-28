@@ -9,21 +9,9 @@
 #include <unordered_set>
 #include <unordered_map>
 
-#include "geo.h"
+#include "domain.h"
 
 namespace transport_catalogue {
-
-// остановка
-struct Stop {
-    std::string_view name;
-    geo_coord::Coordinates coordinates;
-};
-
-// маршрут
-struct Bus {
-    std::string_view name;
-    std::vector<const Stop*> stops;
-};
 
 // информация о маршруте
 struct BusInfo {
@@ -36,7 +24,7 @@ struct BusInfo {
 };
 
 struct HasherPair {
-    size_t operator()(const std::pair<const Stop*, const Stop*>& p) const;
+    size_t operator()(const std::pair<const domain::Stop*, const domain::Stop*>& p) const;
 };
 
 class TransportCatalogue {
@@ -47,51 +35,60 @@ public:
     void addStop(std::string_view name, geo_coord::Coordinates& coord);
 
     // добавить маршрут
-    void addBus(std::string_view name, const std::vector<std::string>& stops);
+    void addBus(std::string_view name, std::string_view name_last_stop, bool is_roundtrip, const std::vector<std::string>& stops);
 
     // добавить информацию о маршруте
-    void addBusInfo(const Bus* bus, const BusInfo& info);
+    void addBusInfo(const domain::Bus* bus, const BusInfo& info);
 
     // поиск остановки по имени
-    const Stop* findStop(std::string_view name) const;
+    const domain::Stop* findStop(std::string_view name) const;
 
     // поиск маршрута по имени
-    const Bus* findBus(std::string_view name) const;
+    const domain::Bus* findBus(std::string_view name) const;
 
     // получение информации о маршруте
-    const BusInfo getBusInfo(const Bus* bus);
+    const BusInfo getBusInfo(const domain::Bus* bus);
     const BusInfo getBusInfo(const std::string_view name);
 
     // получение информации о автобусах проходящих через остановку
-    int getBusesNumOnStop(const Stop* stop);
-    std::vector<const Bus*> getBusesOnStop(const Stop* stop);
+    int getBusesNumOnStop(const domain::Stop* stop) const;
+    std::vector<const domain::Bus*> getBusesOnStop(const domain::Stop* stop);
 
     // установить расстояние между остановок
     void setDistance(const std::string& stop_from, const std::string& stop_to, int distance);
 
     // получить рассояние между остановок
-    int getDistance(const Stop* stop_from, const Stop* stop_to) const;
+    int getDistance(const domain::Stop* stop_from, const domain::Stop* stop_to) const;
+
+    // получить мапу для остановки: имя - указатель
+    const std::unordered_map<std::string_view, const domain::Stop*>& getStops() const;
+
+    // получить мапу для маршрута: имя - указатель
+    const std::unordered_map<std::string_view, const domain::Bus*>& getBuses() const;
+
+    // получить мапу для остановки: остановка - маршруты
+    const std::unordered_map<const domain::Stop*, std::unordered_set<domain::Bus*>>& getStopToBuses() const;
 
 private:
     // здесь живут все имена (сюда показывает string_view)
     std::deque<std::string> m_name_to_storage;
 
     // остановки
-    std::deque<Stop> m_stops;
-    std::unordered_map<std::string_view, const Stop*> m_name_to_stop;
+    std::deque<domain::Stop> m_stops;
+    std::unordered_map<std::string_view, const domain::Stop*> m_name_to_stop;
 
     // маршруты
-    std::deque<Bus> m_buses;
-    std::unordered_map<std::string_view, const Bus*> m_name_to_bus;
+    std::deque<domain::Bus> m_buses;
+    std::unordered_map<std::string_view, const domain::Bus*> m_name_to_bus;
 
     // расстояния между остановками
-    std::unordered_map<std::pair<const Stop*, const Stop*>, int, HasherPair> m_distance;
+    std::unordered_map<std::pair<const domain::Stop*, const domain::Stop*>, int, HasherPair> m_distance;
 
     // таблица для получения автобусов проходящих через остановку
-    std::unordered_map<const Stop*, std::unordered_set<Bus*>> m_stop_to_bus;
+    std::unordered_map<const domain::Stop*, std::unordered_set<domain::Bus*>> m_stop_to_bus;
 
     // таблица для получения информации о маршруте
-    std::unordered_map<const Bus*, BusInfo> m_bus_to_info;
+    std::unordered_map<const domain::Bus*, BusInfo> m_bus_to_info;
 
     std::string_view getName(std::string_view str);
 };
