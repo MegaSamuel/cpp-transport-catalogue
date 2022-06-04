@@ -10,7 +10,13 @@
 namespace json_reader {
 
 namespace details {
-enum class query_type {EMPTY, STOP, BUS, MAP};
+
+enum class query_type {
+    EMPTY,
+    STOP,
+    BUS,
+    MAP
+};
 
 struct Query {
     query_type type = query_type::EMPTY;

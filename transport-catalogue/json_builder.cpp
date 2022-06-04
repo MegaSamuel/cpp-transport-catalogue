@@ -113,7 +113,7 @@ bool Builder::IsPrevArray() const {
 }
 
 bool Builder::IsPrevDict() const {
-    return !m_vct_node.empty() && m_vct_node.back()->IsDict();
+    return !m_vct_node.empty() && m_vct_node.back()->IsMap();
 }
 
 // -->
