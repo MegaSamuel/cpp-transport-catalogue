@@ -62,7 +62,6 @@ void SolutionColor::operator()(Rgb rgb) {
 
 void SolutionColor::operator()(Rgba rgba) {
     out << "rgba("sv << static_cast<int>(rgba.red) << ","sv << static_cast<int>(rgba.green);
-    //out << ","sv << static_cast<int>(rgba.blue) << ","sv << std::setprecision(6) << rgba.opacity << ")"sv;
     out << ","sv << static_cast<int>(rgba.blue) << ","sv << rgba.opacity << ")"sv;
 }
 
@@ -132,7 +131,7 @@ Circle& Circle::SetRadius(double radius)  {
 void Circle::RenderObject(const RenderContext& context) const {
     auto& out = context.out;
     out << "<circle cx=\""sv << center_.x << "\" cy=\""sv << center_.y << "\" "sv;
-    out << "r=\""sv << radius_ << "\" "sv;
+    out << "r=\""sv << radius_ << "\""sv;
     RenderAttrs(out);
     out << "/>"sv;
 }

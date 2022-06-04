@@ -65,7 +65,6 @@ public:
 
 private:
     transport_catalogue::TransportCatalogue& catalogue_;
-    json::Document document_;
     map_renderer::MapRenderer& renderer_;
     std::vector<std::unique_ptr<details::Query>> queries_;
 
@@ -73,6 +72,8 @@ private:
     void LoadStat(const json::Array& vct);
     svg::Color LoadColor(const json::Node& node);
     void LoadRender(const json::Dict& dict);
+
+    int stat_count = 0;
 };
 
 } // namespace json_reader

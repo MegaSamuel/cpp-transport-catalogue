@@ -2,6 +2,7 @@
 #include <sstream>
 
 #include "json_reader.h"
+#include "json_builder.h"
 
 namespace json_reader {
 
@@ -23,7 +24,7 @@ StopQuery QueryStop(const json::Dict& dict) {
     stop.coordinates.lat = dict.at("latitude"s).AsDouble();
     stop.coordinates.lng = dict.at("longitude"s).AsDouble();
 
-    const json::Dict & ref_to_dict = dict.at("road_distances"s).AsMap();
+    const json::Dict & ref_to_dict = dict.at("road_distances"s).AsDict();
 
     stop.distances.reserve(ref_to_dict.size());
     for (const auto& [name, node] : ref_to_dict) {
@@ -101,18 +102,19 @@ JsonReader::JsonReader(transport_catalogue::TransportCatalogue& catalogue,
 }
 
 void JsonReader::Load(std::istream& input) {
-    document_ = json::Load(input);
+    json::Document document = json::Load(input);
 
     size_t total_size = 0;
 
     // запрашиваем размеры
-    for (const auto& [name, node] : document_.GetRoot().AsMap()) {
+    for (const auto& [name, node] : document.GetRoot().AsDict()) {
         if (!name.compare("base_requests"s)) {
             total_size += node.AsArray().size();
         } else if (!name.compare("stat_requests"s)) {
             total_size += node.AsArray().size();
+            stat_count  = node.AsArray().size();
         } else if (!name.compare("render_settings"s)) {
-            total_size += node.AsMap().size();
+            total_size += node.AsDict().size();
         }
     }
 
@@ -120,47 +122,47 @@ void JsonReader::Load(std::istream& input) {
     queries_.reserve(total_size);
 
     // загружаем данные
-    for (const auto& [name, node] : document_.GetRoot().AsMap()) {
+    for (const auto& [name, node] : document.GetRoot().AsDict()) {
         if (!name.compare("base_requests"s)) {
             LoadBase(node.AsArray());
         } else if (!name.compare("stat_requests"s)) {
             LoadStat(node.AsArray());
         } else if (!name.compare("render_settings"s)) {
-            LoadRender(node.AsMap());
+            LoadRender(node.AsDict());
         }
     }
 }
 
 void JsonReader::LoadBase(const json::Array& vct) {
     for (const auto& it : vct) {
-        if (0 == it.AsMap().count("type"s)) {
+        if (0 == it.AsDict().count("type"s)) {
             continue;
         }
 
-        if (!it.AsMap().at("type"s).AsString().compare("Stop"s)) {
+        if (!it.AsDict().at("type"s).AsString().compare("Stop"s)) {
             // остановка
-            queries_.emplace_back(std::make_unique<details::StopQuery>(details::QueryStop(it.AsMap())));
-        } else if (!it.AsMap().at("type"s).AsString().compare("Bus"s)) {
+            queries_.emplace_back(std::make_unique<details::StopQuery>(details::QueryStop(it.AsDict())));
+        } else if (!it.AsDict().at("type"s).AsString().compare("Bus"s)) {
             // маршрут
-            queries_.emplace_back(std::make_unique<details::BusQuery>(details::QueryBus(it.AsMap())));
+            queries_.emplace_back(std::make_unique<details::BusQuery>(details::QueryBus(it.AsDict())));
         }
     }
 }
 
 void JsonReader::LoadStat(const json::Array& vct) {
     for (const auto& it : vct) {
-        if (0 == it.AsMap().count("type"s)) {
+        if (0 == it.AsDict().count("type"s)) {
             continue;
         }
-        if (!it.AsMap().at("type"s).AsString().compare("Stop"s)) {
+        if (!it.AsDict().at("type"s).AsString().compare("Stop"s)) {
             // остановка
-            queries_.emplace_back(std::make_unique<details::StatQuery>(details::QueryStat(it.AsMap())));
-        } else if (!it.AsMap().at("type"s).AsString().compare("Bus"s)) {
+            queries_.emplace_back(std::make_unique<details::StatQuery>(details::QueryStat(it.AsDict())));
+        } else if (!it.AsDict().at("type"s).AsString().compare("Bus"s)) {
             // маршрут
-            queries_.emplace_back(std::make_unique<details::StatQuery>(details::QueryStat(it.AsMap())));
-        } else if (!it.AsMap().at("type"s).AsString().compare("Map"s)) {
+            queries_.emplace_back(std::make_unique<details::StatQuery>(details::QueryStat(it.AsDict())));
+        } else if (!it.AsDict().at("type"s).AsString().compare("Map"s)) {
             // карта
-            queries_.emplace_back(std::make_unique<details::StatQuery>(details::QueryStat(it.AsMap())));
+            queries_.emplace_back(std::make_unique<details::StatQuery>(details::QueryStat(it.AsDict())));
         }
     }
 }
@@ -278,15 +280,14 @@ void JsonReader::Parse() {
 }
 
 void JsonReader::Print(std::ostream& out, request_handler::RequestHandler& request_handler) {
-    out << "["s << std::endl;
-    bool first = true;
+    // результат должен быть в массиве
+    json::Array Arr;
+
+    // резервируем место
+    Arr.reserve(stat_count);
+
     for (const auto& it : queries_) {
         if (details::StatQuery* stat_query = dynamic_cast<details::StatQuery*>(it.get())) {
-            if (!first) {
-                out << ',' << std::endl;
-            }
-            first = false;
-
             if (stat_query->type == details::query_type::STOP) {
                 // формируем словарь
                 json::Dict dict;
@@ -297,12 +298,12 @@ void JsonReader::Print(std::ostream& out, request_handler::RequestHandler& reque
                     if(0 == catalogue_.getBusesNumOnStop(stop)) {
                         // остановка объявлена, но не входит ни в один из маршрутов
 
-                        // формируем ноды
-                        json::Node request_id{stat_query->id};
-                        json::Array arr_buses;
-
-                        dict["buses"] = arr_buses;
-                        dict["request_id"s] = request_id;
+                        dict = json::Builder{}.
+                            StartDict().
+                            Key("buses"s).Value(json::Array{}).
+                            Key("request_id"s).Value(stat_query->id).
+                            EndDict().
+                            Build().AsDict();
                     } else {
                         std::vector<const domain::Bus*> buses = catalogue_.getBusesOnStop(stop);
 
@@ -312,33 +313,30 @@ void JsonReader::Print(std::ostream& out, request_handler::RequestHandler& reque
                                       return bus1->name < bus2->name; 
                                   });
 
-                        // формируем ноды
-                        json::Node request_id{stat_query->id};
                         json::Array arr_buses;
 
                         for (const auto& it : buses) {
                             arr_buses.emplace_back(static_cast<std::string>(it->name));
                         }
 
-                        dict["buses"] = arr_buses;
-                        dict["request_id"s] = request_id;
+                        dict = json::Builder{}.
+                            StartDict().
+                            Key("buses"s).Value(arr_buses).
+                            Key("request_id"s).Value(stat_query->id).
+                            EndDict().
+                            Build().AsDict();
                     }
                 }
                 catch(std::invalid_argument&) {
-                    // формируем ноды
-                    json::Node request_id{stat_query->id};
-                    json::Node error{"not found"s};
-
-                    dict["request_id"s] = request_id;
-                    dict["error_message"s] = error;
+                    dict = json::Builder{}.
+                        StartDict().
+                        Key("request_id"s).Value(stat_query->id).
+                        Key("error_message"s).Value("not found"s).
+                        EndDict().
+                        Build().AsDict();
                 }
 
-
-                // формируем документ
-                json::Document document{dict};
-
-                // печатаем документ
-                json::Print(document, out);
+                Arr.emplace_back(std::move(dict));
             }
             else if (stat_query->type == details::query_type::BUS) {
                 // формируем словарь
@@ -347,59 +345,49 @@ void JsonReader::Print(std::ostream& out, request_handler::RequestHandler& reque
                 try {
                     const transport_catalogue::BusInfo bus_info = catalogue_.getBusInfo(stat_query->name);
 
-                    // формируем ноды
-                    json::Node curvature{bus_info.curvature};
-                    json::Node request_id{stat_query->id};
-                    json::Node route_length{bus_info.distance};
-                    json::Node stop_count{bus_info.stop_number};
-                    json::Node unique_stop_count{bus_info.unique_stop_number};
-
-                    dict["curvature"s] = curvature;
-                    dict["request_id"s] = request_id;
-                    dict["route_length"s] = route_length;
-                    dict["stop_count"s] = stop_count;
-                    dict["unique_stop_count"s] = unique_stop_count;
+                    dict = json::Builder{}.
+                        StartDict().
+                        Key("curvature"s).Value(bus_info.curvature).
+                        Key("request_id"s).Value(stat_query->id).
+                        Key("route_length"s).Value(static_cast<double>(bus_info.distance)).
+                        Key("stop_count"s).Value(bus_info.stop_number).
+                        Key("unique_stop_count"s).Value(bus_info.unique_stop_number).
+                        EndDict().
+                        Build().AsDict();
                 }
                 catch(std::invalid_argument&) {
-                    // формируем ноды
-                    json::Node request_id{stat_query->id};
-                    json::Node error{"not found"s};
-
-                    dict["request_id"s] = request_id;
-                    dict["error_message"s] = error;
+                    dict = json::Builder{}.
+                        StartDict().
+                        Key("request_id"s).Value(stat_query->id).
+                        Key("error_message"s).Value("not found"s).
+                        EndDict().
+                        Build().AsDict();
                 }
 
-                // формируем документ
-                json::Document document{dict};
-
-                // печатаем документ
-                json::Print(document, out);
+                Arr.emplace_back(std::move(dict));
             } else if (stat_query->type == details::query_type::MAP) {
-                // формируем словарь
-                json::Dict dict;
-
                 // формируем карту
                 std::stringstream stream;
                 request_handler.RenderMap(stream);
 
-                // формируем ноды
-                json::Node request_id{stat_query->id};
-
-                json::Node svg_string{stream.str()};
-
-                dict["request_id"s] = request_id;
-                dict["map"s] = svg_string;
-
-                // формируем документ
-                json::Document document{dict};
-
-                // печатаем документ
-                json::Print(document, out);
+                // формируем словарь
+                json::Dict dict = json::Builder{}.
+                    StartDict().
+                    Key("request_id"s).Value(stat_query->id).
+                    Key("map"s).Value(stream.str()).
+                    EndDict().
+                    Build().AsDict();
+                
+                Arr.emplace_back(std::move(dict));
             }
         }
     }
-    out << std::endl;
-    out << "]"s << std::endl;
+
+    // формируем документ
+    json::Document document(Arr);
+
+    // печатаем документ
+    json::Print(document, out);
 }
 
 } // namespace json_reader
