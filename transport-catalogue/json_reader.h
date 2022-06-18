@@ -6,6 +6,7 @@
 #include "request_handler.h"
 #include "json.h"
 #include "map_renderer.h"
+#include "transport_router.h"
 
 namespace json_reader {
 
@@ -15,7 +16,8 @@ enum class query_type {
     EMPTY,
     STOP,
     BUS,
-    MAP
+    MAP,
+    ROUTE
 };
 
 struct Query {
@@ -43,6 +45,8 @@ struct MapQuery : public Query {
 
 struct StatQuery : public Query {
     std::string name;
+    std::string from;
+    std::string to;
     int id = 0;
 };
 
@@ -60,8 +64,9 @@ std::string space_trimmer(const std::string& name);
 
 class JsonReader {
 public:
-    explicit JsonReader(transport_catalogue::TransportCatalogue& catalogue, 
-                        map_renderer::MapRenderer& renderer);
+    explicit JsonReader(transport_catalogue::TransportCatalogue& catalogue,
+                        map_renderer::MapRenderer& renderer,
+                        transport_router::TransportRouter& router);
 
     void Load(std::istream& input);
 
@@ -72,12 +77,14 @@ public:
 private:
     transport_catalogue::TransportCatalogue& catalogue_;
     map_renderer::MapRenderer& renderer_;
+    transport_router::TransportRouter& router_;
     std::vector<std::unique_ptr<details::Query>> queries_;
 
     void LoadBase(const json::Array& vct);
     void LoadStat(const json::Array& vct);
     svg::Color LoadColor(const json::Node& node);
     void LoadRender(const json::Dict& dict);
+    void LoadRouting(const json::Dict& dict);
 
     int stat_count = 0;
 };

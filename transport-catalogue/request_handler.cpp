@@ -2,9 +2,10 @@
 
 namespace request_handler {
 
-RequestHandler::RequestHandler(const transport_catalogue::TransportCatalogue& catalogue, 
-                               map_renderer::MapRenderer& renderer) : 
-                               catalogue_(catalogue), renderer_(renderer) {
+RequestHandler::RequestHandler(const transport_catalogue::TransportCatalogue& catalogue,
+                               map_renderer::MapRenderer& renderer,
+                               transport_router::TransportRouter& router) :
+                               catalogue_(catalogue), renderer_(renderer), router_(router) {
 
 }
 

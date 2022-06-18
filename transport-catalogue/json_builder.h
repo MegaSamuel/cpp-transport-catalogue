@@ -15,19 +15,19 @@ class Builder {
 public:
     Builder() : m_root(nullptr), m_key(std::nullopt), m_vct_node{&m_root} {
     }
-    
+
     DictKeyContext Key(std::string key);
-    
+
     Builder& Value(json::Node::Value value);
-    
+
     DictItemContext StartDict();
-    
+
     ArrayItemContext StartArray();
-    
+
     Builder& EndDict();
-    
+
     Builder& EndArray();
-    
+
     json::Node Build();
 
 private:

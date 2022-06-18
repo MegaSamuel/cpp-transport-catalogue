@@ -11,7 +11,7 @@
 namespace json {
 
 class Node;
-using Array = std::vector<Node>; 
+using Array = std::vector<Node>;
 using Dict = std::map<std::string, Node>;
 using Number = std::variant<int, double>;
 
