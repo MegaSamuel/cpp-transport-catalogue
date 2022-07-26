@@ -34,6 +34,10 @@ void MapRenderer::SetSettings(const RenderSettings& settings) {
     settings_ = settings;
 }
 
+const RenderSettings& MapRenderer::GetSettings() const {
+    return settings_;
+}
+
 void MapRenderer::SetBuses(const std::map<std::string_view, const domain::Bus*> buses) {
     buses_ = buses;
 }

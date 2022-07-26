@@ -69,6 +69,12 @@ public:
     // получить мапу для остановки: остановка - маршруты
     const std::unordered_map<const domain::Stop*, std::unordered_set<domain::Bus*>>& getStopToBuses() const;
 
+    // добавить расстояния для остановки
+    void addStopDistance(const std::string& stop_name, std::vector<std::pair<int, std::string>>& vct_distance);
+
+    // получить мапу расстояний для остановок
+    const std::unordered_map<std::string, std::vector<std::pair<int, std::string>>>& getStopDistance();
+
 private:
     // здесь живут все имена (сюда показывает string_view)
     std::deque<std::string> m_name_to_storage;
@@ -89,6 +95,9 @@ private:
 
     // таблица для получения информации о маршруте
     std::unordered_map<const domain::Bus*, BusInfo> m_bus_to_info;
+
+    // таблица расстояний
+    std::unordered_map<std::string, std::vector<std::pair<int, std::string>>> m_stop_to_dist;
 
     std::string_view getName(std::string_view str);
 };

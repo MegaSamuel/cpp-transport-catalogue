@@ -7,6 +7,7 @@
 #include "json.h"
 #include "map_renderer.h"
 #include "transport_router.h"
+#include "serialization.h"
 
 namespace json_reader {
 
@@ -66,9 +67,11 @@ class JsonReader {
 public:
     explicit JsonReader(transport_catalogue::TransportCatalogue& catalogue,
                         map_renderer::MapRenderer& renderer,
-                        transport_router::TransportRouter& router);
+                        transport_router::TransportRouter& router,
+                        serialization::Serializator& serializator);
 
-    void Load(std::istream& input);
+    void GeneralLoadBase(std::istream& input);
+    void GeneralLoadRequests(std::istream& input);
 
     void Parse();
 
@@ -78,6 +81,7 @@ private:
     transport_catalogue::TransportCatalogue& catalogue_;
     map_renderer::MapRenderer& renderer_;
     transport_router::TransportRouter& router_;
+    serialization::Serializator& serializator_;
     std::vector<std::unique_ptr<details::Query>> queries_;
 
     void LoadBase(const json::Array& vct);
@@ -85,8 +89,9 @@ private:
     svg::Color LoadColor(const json::Node& node);
     void LoadRender(const json::Dict& dict);
     void LoadRouting(const json::Dict& dict);
+    void LoadSerialization(const json::Dict& dict);
 
-    int stat_count = 0;
+    size_t stat_count = 0;
 };
 
 } // namespace json_reader

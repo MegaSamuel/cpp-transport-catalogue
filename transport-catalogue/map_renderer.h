@@ -60,6 +60,7 @@ public:
     MapRenderer() = default;
 
     void SetSettings(const RenderSettings& settings);
+    const RenderSettings& GetSettings() const;
 
     void SetBuses(const std::map<std::string_view, const domain::Bus*> buses);
 

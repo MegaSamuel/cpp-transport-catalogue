@@ -143,4 +143,12 @@ std::string_view TransportCatalogue::getName(std::string_view str) {
     return m_name_to_storage.back();
 }
 
+void TransportCatalogue::addStopDistance(const std::string& stop_name, std::vector<std::pair<int, std::string>>& vct_distance) {
+    m_stop_to_dist[stop_name] = move(vct_distance);
+}
+
+const std::unordered_map<std::string, std::vector<std::pair<int, std::string>>>& TransportCatalogue::getStopDistance() {
+    return m_stop_to_dist;
+}
+
 } // namespace transport_catalogue

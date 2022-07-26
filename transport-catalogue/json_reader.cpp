@@ -101,12 +101,14 @@ StatQuery QueryStat(const json::Dict& dict) {
 
 JsonReader::JsonReader(transport_catalogue::TransportCatalogue& catalogue,
                        map_renderer::MapRenderer& renderer,
-                       transport_router::TransportRouter& router) :
-                       catalogue_(catalogue), renderer_(renderer), router_(router) {
+                       transport_router::TransportRouter& router,
+                       serialization::Serializator& serializator) :
+                       catalogue_(catalogue), renderer_(renderer),
+                       router_(router), serializator_(serializator) {
 
 }
 
-void JsonReader::Load(std::istream& input) {
+void JsonReader::GeneralLoadBase(std::istream& input) {
     json::Document document = json::Load(input);
 
     size_t total_size = 0;
@@ -115,9 +117,6 @@ void JsonReader::Load(std::istream& input) {
     for (const auto& [name, node] : document.GetRoot().AsMap()) {
         if (!name.compare("base_requests"s)) {
             total_size += node.AsArray().size();
-        } else if (!name.compare("stat_requests"s)) {
-            total_size += node.AsArray().size();
-            stat_count  = node.AsArray().size();
         } else if (!name.compare("render_settings"s)) {
             total_size += node.AsMap().size();
         } else if (!name.compare("routing_settings"s)) {
@@ -132,14 +131,43 @@ void JsonReader::Load(std::istream& input) {
     for (const auto& [name, node] : document.GetRoot().AsMap()) {
         if (!name.compare("base_requests"s)) {
             LoadBase(node.AsArray());
-        } else if (!name.compare("stat_requests"s)) {
-            LoadStat(node.AsArray());
         } else if (!name.compare("render_settings"s)) {
             LoadRender(node.AsMap());
         } else if (!name.compare("routing_settings"s)) {
             LoadRouting(node.AsMap());
+        } else if (!name.compare("serialization_settings"s)) {
+            LoadSerialization(node.AsMap());
         }
     }
+}
+
+void JsonReader::GeneralLoadRequests(std::istream& input) {
+    json::Document document = json::Load(input);
+
+    size_t total_size = 0;
+
+    // запрашиваем размеры
+    for (const auto& [name, node] : document.GetRoot().AsMap()) {
+        if (!name.compare("stat_requests"s)) {
+            total_size += node.AsArray().size();
+            stat_count  = node.AsArray().size();
+        }
+    }
+
+    // резервируем место
+    queries_.reserve(total_size);
+
+    // загружаем данные
+    for (const auto& [name, node] : document.GetRoot().AsMap()) {
+        if (!name.compare("stat_requests"s)) {
+            LoadStat(node.AsArray());
+        } else if (!name.compare("serialization_settings"s)) {
+            LoadSerialization(node.AsMap());
+        }
+    }
+
+    // десериализация данных каталога
+    serializator_.Deserialize();
 }
 
 void JsonReader::LoadBase(const json::Array& vct) {
@@ -241,6 +269,14 @@ void JsonReader::LoadRouting(const json::Dict& dict) {
     router_.SetSettings(settings);
 }
 
+void JsonReader::LoadSerialization(const json::Dict& dict) {
+    serialization::SerializatorSettings settings;
+
+    settings.path = dict.at("file"s).AsString();
+
+    serializator_.SetSettings(settings);
+}
+
 void JsonReader::Parse() {
     // проходим по всем запросам, обрабатываем только StopQuery
     for (const auto& it : queries_) {
@@ -253,9 +289,15 @@ void JsonReader::Parse() {
     // проходим по всем запросам, обрабатываем только StopQuery
     for (const auto& it : queries_) {
         if (details::StopQuery* stop_query = dynamic_cast<details::StopQuery*>(it.get())) {
+            std::vector<std::pair<int, std::string>> vct_distance;
             for(auto& [dist, stop_to] : stop_query->distances) {
+                vct_distance.push_back(make_pair(dist, stop_to));
                 // добавляем в каталог расстояния между остановками
                 catalogue_.setDistance(stop_query->name, stop_to, dist);
+            }
+            // запоминаем расстояния для остановки (для сериализации)
+            if (!vct_distance.empty()) {
+                catalogue_.addStopDistance(stop_query->name, vct_distance);
             }
         }
     }
@@ -297,6 +339,9 @@ void JsonReader::Parse() {
 
     // строим маршрут
     router_.CalcRoute();
+
+    // сериализация данных каталога
+    serializator_.Serialize();
 }
 
 void JsonReader::Print(std::ostream& out, request_handler::RequestHandler& request_handler) {

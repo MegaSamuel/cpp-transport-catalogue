@@ -58,6 +58,7 @@ public:
     explicit TransportRouter(const transport_catalogue::TransportCatalogue& catalogue);
 
     void SetSettings(const RouterSettings& settings);
+    const RouterSettings& GetSettings() const;
 
     void CalcRoute();
 

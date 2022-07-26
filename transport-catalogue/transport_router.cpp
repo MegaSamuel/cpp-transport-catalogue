@@ -81,6 +81,10 @@ void TransportRouter::SetSettings(const RouterSettings& settings) {
     settings_ = settings;
 }
 
+const RouterSettings& TransportRouter::GetSettings() const {
+    return settings_;
+}
+
 void TransportRouter::CalcRoute() {
     // все остановки
     const auto& stops = catalogue_.getStops();
