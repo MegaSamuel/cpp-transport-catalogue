@@ -40,16 +40,16 @@ private:
     pr_transport_catalogue::Bus GetBus(const domain::Bus& bus) const;
 
     // кладем в файл
-    void ToStops();
-    void ToBuses();
-    void ToRender();
-    void ToRouter();
+    void WriteStops();
+    void WriteBuses();
+    void WriteRender();
+    void WriteRouter();
 
     // берем из файла
-    void FromStops();
-    void FromBuses();
-    void FromRender();
-    void FromRouter();
+    void ReadStops();
+    void ReadBuses();
+    void ReadRender();
+    void ReadRouter();
 
     // прото конвертеры
     pr_transport_catalogue::Stop StopToPrStop(const domain::Stop& stop) const;

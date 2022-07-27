@@ -24,10 +24,10 @@ void Serializator::Serialize() {
     ofstream out_file(settings_.path, ios::binary);
 
     // подготовка к записи
-    ToStops();
-    ToBuses();
-    ToRender();
-    ToRouter();
+    WriteStops();
+    WriteBuses();
+    WriteRender();
+    WriteRouter();
 
     // пишем в файл
     pr_catalogue_.SerializeToOstream(&out_file);
@@ -40,10 +40,10 @@ void Serializator::Deserialize() {
     pr_catalogue_.ParseFromIstream(&in_file);
 
     // разбираем что прочитали
-    FromStops();
-    FromBuses();
-    FromRender();
-    FromRouter();
+    ReadStops();
+    ReadBuses();
+    ReadRender();
+    ReadRouter();
 
     // строим маршрут
     router_.CalcRoute();
@@ -190,26 +190,26 @@ pr_transport_router::RouterSettings Serializator::RouterToPrRouter(const transpo
 }
 
 // берем все остановки из каталога и кладем в файл
-void Serializator::ToStops() {
+void Serializator::WriteStops() {
     for (const auto [name, stop] : catalogue_.getStops()) {
         *pr_catalogue_.add_stops() = move(StopToPrStop(*stop));
     }
 }
 
 // берем все автобусы из каталога и кладем в файл
-void Serializator::ToBuses() {
+void Serializator::WriteBuses() {
     for (const auto [name, bus] : catalogue_.getBuses()) {
         *pr_catalogue_.add_buses() = move(BusToPrBus(*bus));
     }
 }
 
 // берем настройки карты и кладем в файл
-void Serializator::ToRender() {
+void Serializator::WriteRender() {
     *pr_catalogue_.mutable_render_settings() = move(RenderToPrRender(renderer_.GetSettings()));
 }
 
 // берем настройки роутера и кладем в файл
-void Serializator::ToRouter() {
+void Serializator::WriteRouter() {
     *pr_catalogue_.mutable_router_settings() = move(RouterToPrRouter(router_.GetSettings()));
 }
 
@@ -338,7 +338,7 @@ void Serializator::PrRouterToRouter(const pr_transport_router::RouterSettings& p
 }
 
 // берем все прото остановки и кладем в каталог
-void Serializator::FromStops() {
+void Serializator::ReadStops() {
     for (int i = 0; i < pr_catalogue_.stops_size(); ++i) {
         // добавляем в каталог остановки
         PrStopToStop(pr_catalogue_.stops(i));
@@ -361,17 +361,17 @@ void Serializator::FromStops() {
 }
 
 // берем все прото автобусы и кладем в каталог
-void Serializator::FromBuses() {
+void Serializator::ReadBuses() {
     for (int i = 0; i < pr_catalogue_.buses_size(); ++i) {
         PrBusToBus(pr_catalogue_.buses(i));
     }
 }
 
-void Serializator::FromRender() {
+void Serializator::ReadRender() {
     PrRenderToRender(pr_catalogue_.render_settings());
 }
 
-void Serializator::FromRouter() {
+void Serializator::ReadRouter() {
     PrRouterToRouter(pr_catalogue_.router_settings());
 }
 
